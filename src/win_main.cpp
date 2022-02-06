@@ -116,10 +116,6 @@ void solve_wordle_cli(WordleState* state) {
       printf("%." STR(WORD_LEN) "s    is the only remaining valid word\n", state->words[0].characters);
       return;
     }
-    else {
-      printf("Unknown error ...");
-      return;
-    }
 
     WordN guess = make_guess(state);
 
