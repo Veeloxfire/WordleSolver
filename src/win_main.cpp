@@ -102,6 +102,53 @@ WordN* create_N_word_list(const char* inpath, u32* out_count) {
   return words;
 }
 
+void solve_wordle_cli(WordleState* state) {
+  printf("Wordle Solver Started\nThis solver is compiled for " STR(WORD_LEN) " letters long words\nThe solver will provide you with a guess and you must input the response to each letter of the guess\n\n"
+         "g: green (correct). y: yellow (somewhere in the word). r: grey/red (not in the word)\n\n");
+  printf("For example:\nIf the solver guesses GREAT and the word is GEARS you would have to input gyyyr\nG is correct, REA are in the word but wrong positions, T is not in the word\n\n");
+
+  while (true) {
+    if (state->num_words == 0) {
+      printf("ERROR: No valid words");
+      return;
+    }
+    else if (state->num_words == 1) {
+      printf("%." STR(WORD_LEN) "s    is the only remaining valid word\n", state->words[0].characters);
+      return;
+    }
+    else {
+      printf("Unknown error ...");
+      return;
+    }
+
+    WordN guess = make_guess(state);
+
+  TRY_READ_AGAIN:
+
+    printf("%." STR(WORD_LEN) "s    Num valid words: %u\n", guess.characters, state->num_words);
+
+    char res[WORD_LEN] ={ 0 };
+
+    char nl;
+    scanf_s("%" STR(WORD_LEN) "c%c", res, WORD_LEN, &nl, 1);
+    if (nl != '\n') {
+      printf("Invalid input length ... Try again\n\n");
+      while (fgetc(stdin) != '\n') {};
+      goto TRY_READ_AGAIN;
+    }
+
+    //Verify input
+    for (u32 i = 0; i < WORD_LEN; i++) {
+      char c = res[i];
+      if (c != 'g' && c != 'y' && c != 'r') {
+        printf("%c is not a valid option (of 'g', 'y' and 'r') ... Try Again\n\n", c);
+        goto TRY_READ_AGAIN;
+      }
+    }
+
+    update_state(state, &guess, res);
+  }
+}
 
 int main(int argc, const char** argv) {
   if (argc != 2) {
@@ -116,6 +163,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  solve_wordle_cli(words, num_words);
+  WordleState wordle = init_wordle(words, num_words);
+  solve_wordle_cli(&wordle);
   return 0;
 }
