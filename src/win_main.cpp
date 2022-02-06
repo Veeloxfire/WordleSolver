@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "worldle.h"
 
+#include <stdlib.h>
+
 struct FileData {
   const char* data;
   u64 size;
@@ -146,20 +148,120 @@ void solve_wordle_cli(WordleState* state) {
   }
 }
 
+void tests(const WordN* words, u32 num_words) {
+  WordN* copy = new WordN[num_words];
+
+
+  float average_guess = 0.0f;
+
+  for (u32 i = 0; i < 1000; i++) {
+    //TODO: better random
+    WordN to_guess = words[rand() % num_words];
+
+    for (u32 i = 0; i < num_words; i++) {
+      copy[i] = words[i];
+    }
+
+    WordleState wordle = init_wordle(copy, num_words);
+
+    u32 num_guesses = 0;
+
+    while (true) {
+      num_guesses += 1;
+
+      if (wordle.num_words == 0) {
+        printf("ERROR: No words matched ... to_guess = %." STR(WORD_LEN) "s\n", to_guess.characters);
+        break;
+      }
+      else if (wordle.num_words == 1) {
+
+        if (memcmp(to_guess.characters, wordle.words[0].characters, 5) != 0) {
+          printf("ERROR: SOLUTION DIDNT MATCH!!!!!!! to_guess = %." STR(WORD_LEN) "s     guess = %." STR(WORD_LEN) "s\n", to_guess.characters, wordle.words[0].characters);
+          break;
+        }
+
+        printf("%." STR(WORD_LEN) "s    %u guesses\n", wordle.words[0].characters, num_guesses);
+        break;
+      }
+
+      WordN guess = make_guess(&wordle);
+
+      char res[WORD_LEN] ={};
+
+      //Greens and reds
+      for (u32 u = 0; u < WORD_LEN; u++) {
+        if (to_guess.characters[u] == guess.characters[u]) {
+          res[u] = 'g';
+        }
+        else {
+          res[u] = 'r';
+        }
+      }
+
+      //Needed for stopping duplicate matching
+      //Maps to to_guess
+      //true if has already been matched
+      //everything starts false as nothing has been matched
+      bool res_g[WORD_LEN] ={};
+      
+      //Yellows
+      for (u32 u1 = 0; u1 < WORD_LEN; u1++) {
+        for (u32 u2 = 0; u2 < WORD_LEN; u2++) {
+          if (!res_g[u1] && res[u2] == 'r' && to_guess.characters[u1] == guess.characters[u2]) {
+            res_g[u1] = true;
+            res[u2] = 'y';
+            goto NEXT_LETTER;
+          }
+        }
+      NEXT_LETTER:
+        continue;
+      }
+
+      update_state(&wordle, &guess, res);
+    }
+
+    //update the average guesses
+
+    average_guess = average_guess + (((float)num_guesses - average_guess) / (float)(i + 1));
+  }
+
+  printf("Average guess tries = %f", (double)average_guess);
+
+  delete[] copy;
+}
+
+void syntax_error(const char** argv) {
+  printf("Invalid number of arguments\nSyntax: %s <word list path> or %s -tests <word list path>", argv[0], argv[0]);
+}
+
 int main(int argc, const char** argv) {
-  if (argc != 2) {
-    printf("Invalid number of arguments (%d)\nSyntax: %s <word list path>", argc, argv[0]);
+  if (argc == 2) {
+    u32 num_words = 0;
+    WordN* words = create_N_word_list(argv[1], &num_words);
+    if (words == nullptr) {
+      return 0;
+    }
+
+    WordleState wordle = init_wordle(words, num_words);
+    solve_wordle_cli(&wordle);
+  }
+  else if (argc == 3) {
+    if (strcmp(argv[1], "-tests") == 0) {
+      u32 num_words = 0;
+      WordN* words = create_N_word_list(argv[2], &num_words);
+      if (words == nullptr) {
+        return 0;
+      }
+
+      tests(words, num_words);
+    }
+    else {
+      syntax_error(argv);
+      return 0;      
+    }
+  }
+  else {
+    syntax_error(argv);
     return 0;
   }
-
-  u32 num_words = 0;
-  WordN* words = create_N_word_list(argv[1], &num_words);
-
-  if (words == nullptr) {
-    return 0;
-  }
-
-  WordleState wordle = init_wordle(words, num_words);
-  solve_wordle_cli(&wordle);
-  return 0;
 }
