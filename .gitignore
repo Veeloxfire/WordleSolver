@@ -1,0 +1,14 @@
+*.exe
+*.exe.*
+
+*.vcxproj
+*.vcxproj.*
+
+*.idb
+*.iobj
+*.obj
+*.pdb
+*.ipdb
+*.log
+*.tlog
+*.ilk
